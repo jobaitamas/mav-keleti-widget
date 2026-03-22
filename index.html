@@ -59,7 +59,8 @@
       // kivonunk 1 órát, negatívnál +24, majd kétjegyűre formázzuk
       const hhFixed  = ((hh + 23) % 24).toString().padStart(2, '0');
       const timeStr  = `${hhFixed}:${mm}`;          // „10:46”
-      // ----------------------------------------------------------------      const delayMin = j.delay ?? j.realtimeDelay ?? 0;
+      // ----------------------------------------------------------------
+      const delayMin = j.delay ?? j.realtimeDelay ?? 0;
 
       const color = delayMin > 0 ? 'red' : 'green';
       const html  =
