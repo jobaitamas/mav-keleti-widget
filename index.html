@@ -1,88 +1,178 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MÁV – Gödöllő ↔ Bp-Keleti</title>
   <style>
-    /* 1) egyszerű, mobilbarát tipográfia */
-    body { font-family: Arial, sans-serif; margin: 1rem; line-height: 1.4; }
-    h1  { font-size: 1.3rem; margin-bottom: .8rem; }
-    h2  { font-size: 1.1rem; margin: .6rem 0 .3rem; }
-    .delay { font-weight: bold; }
+    /* --- ALAP STÍLUSOK ------------------------------------ */
+    :root {
+      --c1: #00BCD4; /* türkiz */
+      --c2: #0288D1; /* mélyebb kék */
+      --card-bg: #ffffffcc;          /* fél-átlátszó fehér */
+      --radius: 12px;
+      --shadow: 0 4px 12px #0002;
+    }
+    html,body{
+      margin:0;
+      height:100%;
+    }
+    body{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+      min-height:100vh;
+      padding:1rem;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background:linear-gradient(135deg,var(--c1),var(--c2));
+      color:#fff;
+    }
+    h1{
+      font-size:1.5rem;
+      margin:0.5rem 0 0.8rem;
+      text-align:center;
+    }
+    #countdown{
+      margin-bottom:1rem;
+      font-size:0.95rem;
+      letter-spacing:0.5px;
+    }
+    /* --- KÁRTYÁK ------------------------------------------ */
+    .cards{
+      width:100%;
+      max-width:420px;
+      display:grid;
+      gap:1rem;
+    }
+    .card{
+      background:var(--card-bg);
+      color:#000d;
+      padding:1rem 1.2rem;
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(4px);
+    }
+    .card h2{
+      margin:0 0 0.4rem;
+      font-size:1.1rem;
+      font-weight:600;
+    }
+    .time{
+      font-size:2.4rem;
+      font-weight:700;
+      margin:0.2rem 0;
+    }
+    .delay{
+      font-size:1.1rem;
+      margin-bottom:0.3rem;
+    }
+    .track{
+      font-size:0.95rem;
+      opacity:0.85;
+    }
   </style>
 </head>
 <body>
   <h1>Legközelebbi vonatok – Gödöllő ↔ Bp-Keleti</h1>
+  <div id="countdown">Következő frissítés: 60 s</div>
 
-  <section id="gd-bp">
-    <h2>Gödöllő → Budapest-Keleti</h2>
-    <p id="gd-bp-info">Betöltés… <span class="track"></span></p>
-  </section>
+  <div class="cards">
+    <!-- KÁRTYA 1 -->
+    <div class="card" id="card-gd-bp">
+      <h2>Gödöllő → Bp-Keleti</h2>
+      <p class="time"  id="gd-bp-time">--:--</p>
+      <p class="delay" id="gd-bp-delay">---</p>
+      <p class="track" id="gd-bp-track">Vágány: —</p>
+    </div>
 
-  <section id="bp-gd">
-    <h2>Budapest-Keleti → Gödöllő</h2>
-    <p id="bp-gd-info">Betöltés… <span class="track"></span></p>
-  </section>
+    <!-- KÁRTYA 2 -->
+    <div class="card" id="card-bp-gd">
+      <h2>Bp-Keleti → Gödöllő</h2>
+      <p class="time"  id="bp-gd-time">--:--</p>
+      <p class="delay" id="bp-gd-delay">---</p>
+      <p class="track" id="bp-gd-track">Vágány: —</p>
+    </div>
+  </div>
 
-<!-- … az utolsó <section> után, a </body> elé kerüljön -->
+  <!-- =============== JAVASCRIPT =========================== -->
   <script>
   (() => {
     const BASE = 'https://rail.expert/api/journeys/mav';
-    const pad  = n => n.toString().padStart(2, '0');   // segítség 2 jegyhez
+    const pad  = n => n.toString().padStart(2,'0');
+    let   secsLeft = 60;          // visszaszámláló állapota
 
-    async function getNext(fromName, toName) {
-      // mai dátum + aktuális idő a GET-paraméterekhez
+    /* ------- API hívás & HTML építés egy irányra ---------- */
+    async function getNext(from,to){
       const now  = new Date();
       const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
       const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      const url  = `${BASE}?fromName=${encodeURIComponent(fromName)}&toName=${encodeURIComponent(toName)}&date=${date}&time=${time}`;
+      const url  = `${BASE}?fromName=${encodeURIComponent(from)}&toName=${encodeURIComponent(to)}&date=${date}&time=${time}`;
 
-      try {
+      try{
         const res = await fetch(url);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
+        if(!res.ok) throw new Error('HTTP '+res.status);
         const data = await res.json();
-        if (!data.journeys?.length) return { html: 'Nincs adat az API-tól.' };
 
-        const j     = data.journeys[0];          // legközelebbi járat
-        const leg0  = j.legs?.[0] ?? {};         // első szakasz, lehet undefined
-        const track = leg0.origin?.platform ?? '—'; // vágány vagy „—”
+        if(!data.journeys?.length) return {time:'--:--', delay:'Nincs adat', track:'—', color:'#000'};
 
-        /* --- időzóna-korrekció: API +1 órával előrébb van --- */
-        const depIso  = j.departure;                         // pl. 2026-03-22T11:46:00
-        const hhFix   = ((parseInt(depIso.slice(11,13),10)+23)%24).toString().padStart(2,'0');
-        const mm      = depIso.slice(14,16);
-        const timeStr = `${hhFix}:${mm}`;                    // „10:46”
-        /* ---------------------------------------------------- */
+        const j    = data.journeys[0];
+        const leg0 = j.legs?.[0] ?? {};
+        const track= leg0.origin?.platform ?? '—';
 
-        const delayMin = j.delay ?? j.realtimeDelay ?? 0;
-        const color    = delayMin > 0 ? 'red' : 'green';
+        /* időzóna korrekció –1 óra */
+        const iso  = j.departure;
+        const hh   = ((parseInt(iso.slice(11,13),10)+23)%24).toString().padStart(2,'0');
+        const mm   = iso.slice(14,16);
+        const tStr = `${hh}:${mm}`;
 
-        const html =
-          `Indul: ${timeStr} – ` +
-          `<span class="delay" style="color:${color}">${delayMin} perc</span>` +
-          ` – Vágány: <strong>${track}</strong>`;
+        const delay = j.delay ?? j.realtimeDelay ?? 0;
+        const color = delay>0 ? 'red':'green';
 
-        return { html };
-      } catch (e) {
-        console.error('API/parse error', e);
-        return { html: 'Hiba az adatok betöltésekor.' };
+        return {time:tStr, delay:`${delay} perc`, track, color};
+      }catch(e){
+        console.error(e);
+        return {time:'--:--', delay:'API hiba', track:'—', color:'red'};
       }
     }
 
-    async function refresh() {
-      document.getElementById('gd-bp-info').innerHTML =
-        (await getNext('Gödöllő', 'Budapest-Keleti')).html;
+    /* -------------- Két kártya frissítése ----------------- */
+    async function refreshAll(){
+      // 1) API
+      const gd = await getNext('Gödöllő','Budapest-Keleti');
+      const bp = await getNext('Budapest-Keleti','Gödöllő');
 
-      document.getElementById('bp-gd-info').innerHTML =
-        (await getNext('Budapest-Keleti', 'Gödöllő')).html;
+      // 2) DOM frissítés – Gödöllő → Bp-Keleti
+      document.getElementById('gd-bp-time').textContent  = gd.time;
+      const gdDelay = document.getElementById('gd-bp-delay');
+      gdDelay.textContent = gd.delay;
+      gdDelay.style.color = gd.color;
+      document.getElementById('gd-bp-track').textContent = `Vágány: ${gd.track}`;
+
+      // 3) DOM frissítés – Bp-Keleti → Gödöllő
+      document.getElementById('bp-gd-time').textContent  = bp.time;
+      const bpDelay = document.getElementById('bp-gd-delay');
+      bpDelay.textContent = bp.delay;
+      bpDelay.style.color = bp.color;
+      document.getElementById('bp-gd-track').textContent = `Vágány: ${bp.track}`;
+
+      // 4) visszaszámláló újraindítása
+      secsLeft = 60;
     }
 
-    refresh();                  // első frissítés
-    // setInterval(refresh, 60_000); // később bekapcsolhatod
+    /* -------------- Visszaszámláló óra -------------------- */
+    function tick(){
+      if(--secsLeft <= 0){
+        refreshAll();
+      }
+      document.getElementById('countdown').textContent =
+        `Következő frissítés: ${secsLeft}s`;
+    }
+
+    // első betöltés:
+    refreshAll();
+    setInterval(tick,1000);      // 1 mp-enként
   })();
   </script>
-</body>
-</html>
 </body>
 </html>
