@@ -17,68 +17,72 @@
 
   <section id="gd-bp">
     <h2>Gödöllő → Budapest-Keleti</h2>
-    <p id="gd-bp-info">Betöltés…</p>
+    <p id="gd-bp-info">Betöltés… <span class="track"></span></p>
   </section>
 
   <section id="bp-gd">
     <h2>Budapest-Keleti → Gödöllő</h2>
-    <p id="bp-gd-info">Betöltés…</p>
+    <p id="bp-gd-info">Betöltés… <span class="track"></span></p>
   </section>
 
-<script>
-(() => {
-  const BASE = 'https://rail.expert/api/journeys/mav';
+<!-- … az utolsó <section> után, a </body> elé kerüljön -->
+  <script>
+  (() => {
+    const BASE = 'https://rail.expert/api/journeys/mav';
+    const pad  = n => n.toString().padStart(2, '0');   // segítség 2 jegyhez
 
-  // -- kis segéd a mai dátum/idő GET-paraméterhez -------------------
-  const pad = n => n.toString().padStart(2, '0');
+    async function getNext(fromName, toName) {
+      // mai dátum + aktuális idő a GET-paraméterekhez
+      const now  = new Date();
+      const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+      const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const url  = `${BASE}?fromName=${encodeURIComponent(fromName)}&toName=${encodeURIComponent(toName)}&date=${date}&time=${time}`;
 
-  async function getNext(fromName, toName) {
-    const now  = new Date();
-    const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-    const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const url  = `${BASE}?fromName=${encodeURIComponent(fromName)}&toName=${encodeURIComponent(toName)}&date=${date}&time=${time}`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (!data.journeys?.length) return { html: 'Nincs adat az API-tól.' };
 
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
+        const j     = data.journeys[0];          // legközelebbi járat
+        const leg0  = j.legs?.[0] ?? {};         // első szakasz, lehet undefined
+        const track = leg0.origin?.platform ?? '—'; // vágány vagy „—”
 
-      if (!data.journeys?.length) return { html: 'Nincs adat az API-tól.' };
+        /* --- időzóna-korrekció: API +1 órával előrébb van --- */
+        const depIso  = j.departure;                         // pl. 2026-03-22T11:46:00
+        const hhFix   = ((parseInt(depIso.slice(11,13),10)+23)%24).toString().padStart(2,'0');
+        const mm      = depIso.slice(14,16);
+        const timeStr = `${hhFix}:${mm}`;                    // „10:46”
+        /* ---------------------------------------------------- */
 
-      const j   = data.journeys[0];                 // legközelebbi indulás
-      /* --- IDŐZÓNA KORREKCIÓ: API +1 órával előrébb van --- */
-      const depIso  = j.departure;                  // pl. 2026-03-22T11:46:00
-      const hh      = parseInt(depIso.slice(11, 13), 10);  // 11
-      const mm      = depIso.slice(14, 16);                 // "46"
-      const hhFix   = ((hh + 23) % 24).toString().padStart(2, '0'); // -1 óra
-      const timeStr = `${hhFix}:${mm}`;             // "10:46"
-      /* ------------------------------------------------------ */
+        const delayMin = j.delay ?? j.realtimeDelay ?? 0;
+        const color    = delayMin > 0 ? 'red' : 'green';
 
-      const delayMin = j.delay ?? j.realtimeDelay ?? 0;
-      const color    = delayMin > 0 ? 'red' : 'green';
+        const html =
+          `Indul: ${timeStr} – ` +
+          `<span class="delay" style="color:${color}">${delayMin} perc</span>` +
+          ` – Vágány: <strong>${track}</strong>`;
 
-      const html =
-        `Indul: ${timeStr} – ` +
-        `<span class="delay" style="color:${color}">${delayMin} perc</span>`;
-
-      return { html };
-    } catch (e) {
-      console.error('API/parse error', e);
-      return { html: 'Hiba az adatok betöltésekor.' };
+        return { html };
+      } catch (e) {
+        console.error('API/parse error', e);
+        return { html: 'Hiba az adatok betöltésekor.' };
+      }
     }
-  }
 
-  async function refresh() {
-    document.getElementById('gd-bp-info').innerHTML =
-      (await getNext('Gödöllő', 'Budapest-Keleti')).html;
+    async function refresh() {
+      document.getElementById('gd-bp-info').innerHTML =
+        (await getNext('Gödöllő', 'Budapest-Keleti')).html;
 
-    document.getElementById('bp-gd-info').innerHTML =
-      (await getNext('Budapest-Keleti', 'Gödöllő')).html;
-  }
+      document.getElementById('bp-gd-info').innerHTML =
+        (await getNext('Budapest-Keleti', 'Gödöllő')).html;
+    }
 
-  refresh();                      // első futás
-  // setInterval(refresh, 60_000) // később bekapcsolható
-})();
-</script>
+    refresh();                  // első frissítés
+    // setInterval(refresh, 60_000); // később bekapcsolhatod
+  })();
+  </script>
+</body>
+</html>
 </body>
 </html>
