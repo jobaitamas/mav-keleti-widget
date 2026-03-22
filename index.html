@@ -122,7 +122,7 @@
             hh=((parseInt(iso.slice(11,13))+23)%24).toString().padStart(2,'0'),
             mm=iso.slice(14,16),
             delay =j.delay??j.realtimeDelay??j.legs?.[0]?.origin?.delayMinutes??j.legs?.[0]?.origin?.prognosis?.departureDelay??0;
-      return {t:`${hh}:${mm}`, d:`${delay} perc`, c:delay>0?'red':'green', tr:leg.origin?.platform??'—'};
+      return {t:`${hh}:${mm}`, d:`${delay} perc`, c:delay>0?'red':'green', tr:leg.origin?.platform??leg.origin?.plannedPlatform??leg.origin?.departurePlatform?.name??'—'};
     }catch(e){return{t:'--:--',d:'Hiba',c:'red',tr:'—'};}
   }
 
