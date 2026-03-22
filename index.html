@@ -51,12 +51,13 @@
       if (!data.journeys?.length) return { html: 'Nincs adat.' };
 
       const j   = data.journeys[0];           // első = legkorábbi indulás
-      const dep = new Date(j.departure);
-      const delayMin = j.delay ?? j.realtimeDelay ?? 0;  // ha nincs késés-mező, 0-nak vesszük
+      const depIso   = j.departure;          // pl. 2026-03-22T10:46:00
+      const timeStr  = depIso.slice(11, 16); // „10:46” – nincs időzóna-eltolás
+      const delayMin = j.delay ?? j.realtimeDelay ?? 0;
 
       const color = delayMin > 0 ? 'red' : 'green';
       const html  =
-        `Indul: ${dep.toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'})} – ` +
+        `Indul: ${timeStr} – ` +
         `<span class="delay" style="color:${color}">${delayMin} perc</span>`;
       return { html };
     } catch (e) {
