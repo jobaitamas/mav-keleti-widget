@@ -52,8 +52,14 @@
 
       const j   = data.journeys[0];           // első = legkorábbi indulás
       const depIso   = j.departure;          // pl. 2026-03-22T10:46:00
-      const timeStr  = depIso.slice(11, 16); // „10:46” – nincs időzóna-eltolás
-      const delayMin = j.delay ?? j.realtimeDelay ?? 0;
+// --- IDŐZÓNA-KORREKCIÓ (+1 helyett -1) -------------------------
+      const depIso   = j.departure;                 // pl. 2026-03-22T11:46:00
+      const hh       = parseInt(depIso.slice(11, 13), 10); // 11
+      const mm       = depIso.slice(14, 16);               // „46”
+      // kivonunk 1 órát, negatívnál +24, majd kétjegyűre formázzuk
+      const hhFixed  = ((hh + 23) % 24).toString().padStart(2, '0');
+      const timeStr  = `${hhFixed}:${mm}`;          // „10:46”
+      // ----------------------------------------------------------------      const delayMin = j.delay ?? j.realtimeDelay ?? 0;
 
       const color = delayMin > 0 ? 'red' : 'green';
       const html  =
