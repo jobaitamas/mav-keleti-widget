@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MÁV – Gödöllő ↔ Bp-Keleti</title>
+  <style>
+    /* 1) egyszerű, mobilbarát tipográfia */
+    body { font-family: Arial, sans-serif; margin: 1rem; line-height: 1.4; }
+    h1  { font-size: 1.3rem; margin-bottom: .8rem; }
+    h2  { font-size: 1.1rem; margin: .6rem 0 .3rem; }
+    .delay { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Legközelebbi vonatok – Gödöllő ↔ Bp-Keleti</h1>
+
+  <section id="gd-bp">
+    <h2>Gödöllő → Budapest-Keleti</h2>
+    <p id="gd-bp-info">Betöltés…</p>
+  </section>
+
+  <section id="bp-gd">
+    <h2>Budapest-Keleti → Gödöllő</h2>
+    <p id="bp-gd-info">Betöltés…</p>
+  </section>
+
+<script>
+/*
+  2) Azonnal futó függvény, hogy ne szennyezzük a globális névteret.
+  3) Lekérjük mindkét irányra a Rail Expert /mav végponttól a legközelebbi járatot.
+*/
+(() => {
+  const BASE = 'https://rail.expert/api/journeys/mav';
+
+  // Segéd a (YYYY-MM-DD, HH:MM) formátumhoz
+  const pad = n => n.toString().padStart(2, '0');
+
+  async function getNext(fromName, toName) {
+    const now = new Date();
+    const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    const url = `${BASE}?fromName=${encodeURIComponent(fromName)}&toName=${encodeURIComponent(toName)}&date=${date}&time=${time}`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      if (!data.journeys?.length) return { html: 'Nincs adat.' };
+
+      const j   = data.journeys[0];           // első = legkorábbi indulás
+      const dep = new Date(j.departure);
+      const delayMin = j.delay ?? j.realtimeDelay ?? 0;  // ha nincs késés-mező, 0-nak vesszük
+
+      const color = delayMin > 0 ? 'red' : 'green';
+      const html  =
+        `Indul: ${dep.toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'})} – ` +
+        `<span class="delay" style="color:${color}">${delayMin} perc</span>`;
+      return { html };
+    } catch (e) {
+      console.error(e);
+      return { html: 'Hiba az adatok lekérésekor.' };
+    }
+  }
+
+  async function refresh() {
+    document.getElementById('gd-bp-info').innerHTML = (await getNext('Gödöllő','Budapest-Keleti')).html;
+    document.getElementById('bp-gd-info').innerHTML = (await getNext('Budapest-Keleti','Gödöllő')).html;
+  }
+
+  refresh();               // azonnali első frissítés
+  // setInterval(refresh, 60000);   // 4) ha szeretnél 60 mp-enként autófrissítést, vedd ki a kommentet
+})();
+</script>
+</body>
+</html>
