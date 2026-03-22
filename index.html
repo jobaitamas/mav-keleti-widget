@@ -3,176 +3,147 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MÁV – Gödöllő ↔ Bp-Keleti</title>
+  <title>🚂 Legközelebbi vonatok</title>
   <style>
-    /* --- ALAP STÍLUSOK ------------------------------------ */
-    :root {
-      --c1: #00BCD4; /* türkiz */
-      --c2: #0288D1; /* mélyebb kék */
-      --card-bg: #ffffffcc;          /* fél-átlátszó fehér */
-      --radius: 12px;
-      --shadow: 0 4px 12px #0002;
+    :root{
+      --c1:#00BCD4;--c2:#0288D1;
+      --card:#ffffffdd;--r:14px;--sh:0 4px 12px #0003;
     }
-    html,body{
-      margin:0;
-      height:100%;
-    }
+    html,body{margin:0;height:100%}
     body{
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:flex-start;
-      min-height:100vh;
-      padding:1rem;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      display:flex;flex-direction:column;align-items:center;
+      min-height:100vh;padding:1rem;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
       background:linear-gradient(135deg,var(--c1),var(--c2));
-      color:#fff;
+      color:#fff;overflow:hidden;
     }
-    h1{
-      font-size:1.5rem;
-      margin:0.5rem 0 0.8rem;
-      text-align:center;
-    }
-    #countdown{
-      margin-bottom:1rem;
-      font-size:0.95rem;
-      letter-spacing:0.5px;
-    }
-    /* --- KÁRTYÁK ------------------------------------------ */
-    .cards{
-      width:100%;
-      max-width:420px;
-      display:grid;
-      gap:1rem;
-    }
+    h1{font-size:1.55rem;margin:0.3rem 0 0.9rem;text-align:center;}
+    #countdown{margin-bottom:0.8rem;font-size:0.95rem;letter-spacing:0.4px}
+
+    /* ===== CAROUSEL ===== */
+    .wrap{position:relative;width:100%;max-width:420px;height:240px;}
+    .cards{height:100%;position:relative;overflow:hidden;border-radius:var(--r);}
     .card{
-      background:var(--card-bg);
-      color:#000d;
-      padding:1rem 1.2rem;
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(4px);
+      position:absolute;top:0;left:100%;width:100%;height:100%;
+      background:var(--card);color:#000d;padding:1.2rem 1.4rem;
+      display:flex;flex-direction:column;justify-content:center;
+      box-shadow:var(--sh);backdrop-filter:blur(5px);border-radius:var(--r);
+      transition:transform .35s cubic-bezier(.4,.8,.2,1),left 0s .35s;
     }
-    .card h2{
-      margin:0 0 0.4rem;
-      font-size:1.1rem;
-      font-weight:600;
+    .card.active{left:0;transform:translateX(0);transition:left 0s,transform .35s cubic-bezier(.4,.8,.2,1);}
+    .card.exit-left{transform:translateX(-100%);}
+    .card.exit-right{transform:translateX(100%);}
+    .card h2{margin:0 0 0.35rem;font-size:1.1rem;font-weight:600;}
+    .time{font-size:2.5rem;font-weight:700;margin:0.25rem 0;}
+    .delay{font-size:1.1rem;margin-bottom:0.35rem;display:inline-block;}
+    .track{font-size:0.95rem;opacity:0.85;}
+
+    .nav{
+      position:absolute;top:50%;transform:translateY(-50%);
+      width:42px;height:42px;border:none;background:#ffffff55;
+      border-radius:50%;display:flex;align-items:center;justify-content:center;
+      color:#000d;font-size:1.7rem;font-weight:bold;cursor:pointer;backdrop-filter:blur(4px);
     }
-    .time{
-      font-size:2.4rem;
-      font-weight:700;
-      margin:0.2rem 0;
-    }
-    .delay{
-      font-size:1.1rem;
-      margin-bottom:0.3rem;
-    }
-    .track{
-      font-size:0.95rem;
-      opacity:0.85;
-    }
+    .nav:hover{background:#ffffff88;}
+    #prev{left:-21px;} #next{right:-21px;}
+    .nav:disabled{opacity:.3;cursor:default;}
+    @media(hover:none){.nav{width:48px;height:48px;font-size:1.9rem;}}
   </style>
 </head>
 <body>
-  <h1>Legközelebbi vonatok – Gödöllő ↔ Bp-Keleti</h1>
+  <h1>🚂 Legközelebbi vonatok</h1>
   <div id="countdown">Következő frissítés: 60 s</div>
 
-  <div class="cards">
-    <!-- KÁRTYA 1 -->
-    <div class="card" id="card-gd-bp">
-      <h2>Gödöllő → Bp-Keleti</h2>
-      <p class="time"  id="gd-bp-time">--:--</p>
-      <p class="delay" id="gd-bp-delay">---</p>
-      <p class="track" id="gd-bp-track">Vágány: —</p>
+  <div class="wrap" id="carousel">
+    <div class="cards">
+      <div class="card active" data-idx="0">
+        <h2>🏡 Gödöllő → Bp-Keleti</h2>
+        <span class="time"  id="gd-bp-time">--:--</span>
+        <span class="delay" id="gd-bp-delay">---</span>
+        <span class="track" id="gd-bp-track">Vágány: —</span>
+      </div>
+      <div class="card" data-idx="1">
+        <h2>Bp-Keleti → 🏡 Gödöllő</h2>
+        <span class="time"  id="bp-gd-time">--:--</span>
+        <span class="delay" id="bp-gd-delay">---</span>
+        <span class="track" id="bp-gd-track">Vágány: —</span>
+      </div>
     </div>
-
-    <!-- KÁRTYA 2 -->
-    <div class="card" id="card-bp-gd">
-      <h2>Bp-Keleti → Gödöllő</h2>
-      <p class="time"  id="bp-gd-time">--:--</p>
-      <p class="delay" id="bp-gd-delay">---</p>
-      <p class="track" id="bp-gd-track">Vágány: —</p>
-    </div>
+    <button id="prev" class="nav">‹</button>
+    <button id="next" class="nav">›</button>
   </div>
 
-  <!-- =============== JAVASCRIPT =========================== -->
-  <script>
-  (() => {
-    const BASE = 'https://rail.expert/api/journeys/mav';
-    const pad  = n => n.toString().padStart(2,'0');
-    let   secsLeft = 60;          // visszaszámláló állapota
+<script>
+(()=>{        /* ===== CONFIG ===== */
+  const BASE='https://rail.expert/api/journeys/mav';
+  const pad=n=>n.toString().padStart(2,'0');
+  let secs=60,cur=0;
 
-    /* ------- API hívás & HTML építés egy irányra ---------- */
-    async function getNext(from,to){
-      const now  = new Date();
-      const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-      const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      const url  = `${BASE}?fromName=${encodeURIComponent(from)}&toName=${encodeURIComponent(to)}&date=${date}&time=${time}`;
+  const cards=[...document.querySelectorAll('.card')],
+        prev=document.getElementById('prev'),
+        next=document.getElementById('next'),
+        cd  =document.getElementById('countdown');
 
-      try{
-        const res = await fetch(url);
-        if(!res.ok) throw new Error('HTTP '+res.status);
-        const data = await res.json();
+  function nav(){prev.disabled=cur===0;next.disabled=cur===cards.length-1;}
 
-        if(!data.journeys?.length) return {time:'--:--', delay:'Nincs adat', track:'—', color:'#000'};
+  function go(idx,dir){
+    if(idx<0||idx>=cards.length||idx===cur) return;
+    cards[cur].classList.remove('active');
+    cards[cur].classList.add(dir==='left'?'exit-left':'exit-right');
+    const inc=cards[idx];
+    inc.classList.remove('exit-left','exit-right');
+    inc.classList.add('active');
+    cur=idx; nav();
+  }
+  prev.onclick=()=>go(cur-1,'right');
+  next.onclick=()=>go(cur+1,'left');
 
-        const j    = data.journeys[0];
-        const leg0 = j.legs?.[0] ?? {};
-        const track= leg0.origin?.platform ?? '—';
+  /* swipe mobil */
+  let sx=null,th=40,el=document.getElementById('carousel');
+  el.addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
+  el.addEventListener('touchend',e=>{
+    if(sx===null) return;
+    const d=e.changedTouches[0].clientX-sx;
+    if(Math.abs(d)>th){d<0?go(cur+1,'left'):go(cur-1,'right');}
+    sx=null;
+  });
 
-        /* időzóna korrekció –1 óra */
-        const iso  = j.departure;
-        const hh   = ((parseInt(iso.slice(11,13),10)+23)%24).toString().padStart(2,'0');
-        const mm   = iso.slice(14,16);
-        const tStr = `${hh}:${mm}`;
+  /* ===== API ONE LEG ===== */
+  async function getNext(from,to){
+    const n=new Date(),
+          date=`${n.getFullYear()}-${pad(n.getMonth()+1)}-${pad(n.getDate())}`,
+          time=`${pad(n.getHours())}:${pad(n.getMinutes())}`,
+          url =`${BASE}?fromName=${encodeURIComponent(from)}&toName=${encodeURIComponent(to)}&date=${date}&time=${time}`;
+    try{
+      const r=await fetch(url); if(!r.ok) throw new Error(r.status);
+      const d=await r.json();  if(!d.journeys?.length) throw 'nincs';
+      const j=d.journeys[0], leg=j.legs?.[0]??{},
+            iso=j.departure,
+            hh=((parseInt(iso.slice(11,13))+23)%24).toString().padStart(2,'0'),
+            mm=iso.slice(14,16),
+            delay=j.delay??j.realtimeDelay??0;
+      return {t:`${hh}:${mm}`, d:`${delay} perc`, c:delay>0?'red':'green', tr:leg.origin?.platform??'—'};
+    }catch(e){return{t:'--:--',d:'Hiba',c:'red',tr:'—'};}
+  }
 
-        const delay = j.delay ?? j.realtimeDelay ?? 0;
-        const color = delay>0 ? 'red':'green';
+  async function refresh(){
+    const gd=await getNext('Gödöllő','Budapest-Keleti'),
+          bp=await getNext('Budapest-Keleti','Gödöllő');
 
-        return {time:tStr, delay:`${delay} perc`, track, color};
-      }catch(e){
-        console.error(e);
-        return {time:'--:--', delay:'API hiba', track:'—', color:'red'};
-      }
-    }
+    document.getElementById('gd-bp-time').textContent  =gd.t;
+    const gdd=document.getElementById('gd-bp-delay'); gdd.textContent=gd.d; gdd.style.color=gd.c;
+    document.getElementById('gd-bp-track').textContent=`Vágány: ${gd.tr}`;
 
-    /* -------------- Két kártya frissítése ----------------- */
-    async function refreshAll(){
-      // 1) API
-      const gd = await getNext('Gödöllő','Budapest-Keleti');
-      const bp = await getNext('Budapest-Keleti','Gödöllő');
+    document.getElementById('bp-gd-time').textContent  =bp.t;
+    const bpd=document.getElementById('bp-gd-delay'); bpd.textContent=bp.d; bpd.style.color=bp.c;
+    document.getElementById('bp-gd-track').textContent=`Vágány: ${bp.tr}`;
 
-      // 2) DOM frissítés – Gödöllő → Bp-Keleti
-      document.getElementById('gd-bp-time').textContent  = gd.time;
-      const gdDelay = document.getElementById('gd-bp-delay');
-      gdDelay.textContent = gd.delay;
-      gdDelay.style.color = gd.color;
-      document.getElementById('gd-bp-track').textContent = `Vágány: ${gd.track}`;
+    secs=60;
+  }
 
-      // 3) DOM frissítés – Bp-Keleti → Gödöllő
-      document.getElementById('bp-gd-time').textContent  = bp.time;
-      const bpDelay = document.getElementById('bp-gd-delay');
-      bpDelay.textContent = bp.delay;
-      bpDelay.style.color = bp.color;
-      document.getElementById('bp-gd-track').textContent = `Vágány: ${bp.track}`;
-
-      // 4) visszaszámláló újraindítása
-      secsLeft = 60;
-    }
-
-    /* -------------- Visszaszámláló óra -------------------- */
-    function tick(){
-      if(--secsLeft <= 0){
-        refreshAll();
-      }
-      document.getElementById('countdown').textContent =
-        `Következő frissítés: ${secsLeft}s`;
-    }
-
-    // első betöltés:
-    refreshAll();
-    setInterval(tick,1000);      // 1 mp-enként
-  })();
-  </script>
+  function tick(){if(--secs<=0) refresh(); cd.textContent=`Következő frissítés: ${secs}s`;}
+  refresh(); setInterval(tick,1000); nav();
+})();
+</script>
 </body>
 </html>
