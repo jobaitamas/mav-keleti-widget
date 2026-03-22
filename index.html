@@ -1,3 +1,30 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MÁV – Gödöllő ↔ Bp-Keleti</title>
+  <style>
+    /* 1) egyszerű, mobilbarát tipográfia */
+    body { font-family: Arial, sans-serif; margin: 1rem; line-height: 1.4; }
+    h1  { font-size: 1.3rem; margin-bottom: .8rem; }
+    h2  { font-size: 1.1rem; margin: .6rem 0 .3rem; }
+    .delay { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Legközelebbi vonatok – Gödöllő ↔ Bp-Keleti</h1>
+
+  <section id="gd-bp">
+    <h2>Gödöllő → Budapest-Keleti</h2>
+    <p id="gd-bp-info">Betöltés…</p>
+  </section>
+
+  <section id="bp-gd">
+    <h2>Budapest-Keleti → Gödöllő</h2>
+    <p id="bp-gd-info">Betöltés…</p>
+  </section>
+
 <script>
 (() => {
   const BASE = 'https://rail.expert/api/journeys/mav';
@@ -53,3 +80,5 @@
   // setInterval(refresh, 60_000) // később bekapcsolható
 })();
 </script>
+</body>
+</html>
